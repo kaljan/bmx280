@@ -1,0 +1,1 @@
+# Linux kernel module for BMP280/BME280 environmental sensor

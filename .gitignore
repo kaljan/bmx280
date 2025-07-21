@@ -1,0 +1,9 @@
+*.[oa]
+~*
+*.tmp*
+*.bkup*
+*_Debug/
+*_Rebug/
+*_Build/
+temp/
+tmp/
