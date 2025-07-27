@@ -11,6 +11,12 @@
 #ifndef BMX280_REG_H
 #define BMX280_REG_H
 
+#define BMX280_GET_FIELD(reg, mask, offset) \
+    (((reg) >> (offset)) & (mask))
+
+#define BMX280_SET_FIELD(value, reg, mask, offset) \
+    ((reg) = (((reg) & (~((mask) << (offset)))) | (((value) & (mask)) << (offset))))
+
 /* I2C Address */
 #define BMX280_I2C_ADDR0       0x76
 #define BMX280_I2C_ADDR1       0x77
@@ -71,6 +77,18 @@
 #define BMX280_CMR_MODE_FORCED      0x01
 #define BMX280_CMR_MODE_NORMAL      0x03
 
+#define BMX280_GET_OSRS_T(reg)     BMX280_GET_FIELD(reg, \
+    BMX280_OVERSAMPLING_MASK, BMX280_CMR_OSRS_T_OFFSET)
+
+#define BMX280_GET_OSRS_P(reg)     BMX280_GET_FIELD(reg, \
+    BMX280_OVERSAMPLING_MASK, BMX280_CMR_OSRS_P_OFFSET)
+
+#define BMX280_SET_OSRS_T(value, reg)     BMX280_SET_FIELD(value, \
+    reg, BMX280_OVERSAMPLING_MASK, BMX280_CMR_OSRS_T_OFFSET)
+
+#define BMX280_SET_OSRS_P(value, reg)     BMX280_SET_FIELD(value, \
+    reg, BMX280_OVERSAMPLING_MASK, BMX280_CMR_OSRS_P_OFFSET)
+
 /* 5.4.4 Register 0xF3 “status” */
 #define BMX280_SR                   0xF3
 #define BMX280_SR_MEAS              0x08
@@ -79,6 +97,14 @@
 /* 5.4.3 Register 0xF2 “ctrl_hum” */
 #define BMX280_CHR                  0xF2
 #define BMX280_CHR_OSRS_H_OFFSET    0
+
+#define BMX280_GET_OSRS_H(reg)     BMX280_GET_FIELD(reg, \
+    BMX280_OVERSAMPLING_MASK, BMX280_CMR_OSRS_H_OFFSET)
+
+#define BMX280_SET_OSRS_H(value, reg)     BMX280_SET_FIELD(value, \
+    reg, BMX280_OVERSAMPLING_MASK, BMX280_CHR_OSRS_H_OFFSET)
+
+
 
 /* Calibration data registers */
 #define BMX280_REG_CALIB00          0x88

@@ -18,35 +18,23 @@
 static ssize_t calibration_show(struct device *dev,
     struct device_attribute *attr, char *buf) {
     struct i2c_client *client = to_i2c_client(dev);
-    struct bme280_dev *handle = i2c_get_clientdata(client);
-    return sprintf(buf,
-        "H1=%d\n"
-        "H2=%d\n"
-        "H3=%d\n"
-        "H4=%d\n"
-        "H5=%d\n"
-        "H6=%d\n"
-        , (int)handle->cal.hmdt.dig_H1
-        , (int)handle->cal.hmdt.dig_H2
-        , (int)handle->cal.hmdt.dig_H3
-        , (int)handle->cal.hmdt.dig_H4
-        , (int)handle->cal.hmdt.dig_H5
-        , (int)handle->cal.hmdt.dig_H6
-    );
+    struct bmx280_dev *handle = i2c_get_clientdata(client);
+    if (handle->cal_show != NULL) {
+        return handle->cal_show(handle->data, BMX280_HMDT_ID, buf);
+    }
+    return -1;
 }
 
 static ssize_t value_show(struct device *dev,
     struct device_attribute *attr, char *buf) {
     struct i2c_client *client = to_i2c_client(dev);
-    struct bme280_dev *handle = i2c_get_clientdata(client);
-    struct bme280_data data;
+    struct bmx280_dev *handle = i2c_get_clientdata(client);
 
-    if (bme280_get_data(handle, &data) < 0) {
-        dev_warn(&client->dev, "read data failed\n");
-        return -1;
+    if (handle->data_show != NULL) {
+        return handle->data_show(handle->data, client, BMX280_HMDT_ID, buf);
     }
 
-    return sprintf(buf, "%u\n", data.humidity);
+    return -1;
 }
 
 static ssize_t scale_show(struct device *dev,
@@ -57,31 +45,25 @@ static ssize_t scale_show(struct device *dev,
 static ssize_t oversampling_show(struct device *dev,
     struct device_attribute *attr, char *buf) {
     struct i2c_client *client = to_i2c_client(dev);
-    uint8_t data;
-    const char* osrs = 0;
+    struct bmx280_dev *handle = i2c_get_clientdata(client);
 
-    if (bmx280_i2c_read(client, BMX280_CHR, &data, 1) <= 0) {
-        dev_warn(&client->dev, "read standby time failed\n");
-        return -1;
+    if (handle->osrs_show != NULL) {
+        return handle->osrs_show(handle->data, client, BMX280_HMDT_ID, buf);
     }
 
-    osrs = bmx280_osrs_to_str(data);
-    return sprintf(buf, "%s\n", osrs);
+    return -1;
 }
 
 static ssize_t oversampling_store(struct device *dev,
     struct device_attribute *attr, const char *buf, size_t count) {
     struct i2c_client *client = to_i2c_client(dev);
-    struct bme280_dev *handle = i2c_get_clientdata(client);
-    int8_t val = bmx280_str_to_osrs(buf);
+    struct bmx280_dev *handle = i2c_get_clientdata(client);
 
-    if (val < 0) {
-        return -1;
+    if (handle->osrs_store != NULL) {
+        return handle->osrs_store(handle->data, client, BMX280_HMDT_ID, buf, count);
     }
 
-    handle->osrs.t = val;
-
-    return count;
+    return -1;
 }
 
 

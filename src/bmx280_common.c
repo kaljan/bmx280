@@ -15,7 +15,7 @@
 #include <linux/kernel.h>
 
 
-int bme280_get_data_reg(uint32_t* const dst, const uint8_t* data, size_t size) {
+int bmx280_get_data_reg(uint32_t* const dst, const uint8_t* data, size_t size) {
     if ((data != NULL) && (dst != NULL)) {
         if (size == 2) {
             *dst = ((((uint32_t)(*data)) & 0x000000FFUL) << 8) |
@@ -234,9 +234,9 @@ int bmp280_conv_data(struct bmp280_data* dst, struct bmp280_cal* cal,
     uint32_t t_raw, p_raw;
     if ((dst == NULL) || (data == NULL) || (cal == NULL)) {
         return -1;
-    } else if (bme280_get_data_reg(&t_raw, data, 3) < 0) {
+    } else if (bmx280_get_data_reg(&p_raw, data, 3) < 0) {
         return -1;
-    } else if (bme280_get_data_reg(&p_raw, &data[3], 3) < 0) {
+    } else if (bmx280_get_data_reg(&t_raw, &data[3], 3) < 0) {
         return -1;
     }
 
@@ -251,11 +251,11 @@ int bme280_conv_data(struct bme280_data* dst, struct bme280_cal* cal,
     uint32_t t_raw, p_raw, h_raw;
     if ((dst == NULL) || (data == NULL) || (cal == NULL)) {
         return -1;
-    } else if (bme280_get_data_reg(&p_raw, data, 3) < 0) {
+    } else if (bmx280_get_data_reg(&p_raw, data, 3) < 0) {
         return -1;
-    } else if (bme280_get_data_reg(&t_raw, &data[3], 3) < 0) {
+    } else if (bmx280_get_data_reg(&t_raw, &data[3], 3) < 0) {
         return -1;
-    } else if (bme280_get_data_reg(&h_raw, &data[6], 2) < 0) {
+    } else if (bmx280_get_data_reg(&h_raw, &data[6], 2) < 0) {
         return -1;
     }
 
@@ -321,38 +321,6 @@ int8_t bmx280_str_to_mode(const char* str) {
     } else if (strcmp(str, "sleep") == 0) {
         return 0;
     }
-    return -1;
-}
-
-int bmx280_stby_to_int(uint8_t value) {
-    switch (value & 0x07) {
-    case 0: return 500;
-    case 1: return 62500;
-    case 2: return 125000;
-    case 3: return 250000;
-    case 4: return 500000;
-    case 5: return 1000000;
-    case 6: return 10000;
-    case 7: return 20000;
-    default: break;
-    }
-
-    return 0;
-}
-
-int8_t bmx280_int_to_stby(int value) {
-    switch (value) {
-    case 500: return 0;
-    case 62500: return 1;
-    case 125000: return 2;
-    case 250000: return 3;
-    case 500000: return 4;
-    case 1000000: return 5;
-    case 10000: return 6;
-    case 20000: return 7;
-    default: break;
-    }
-
     return -1;
 }
 

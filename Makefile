@@ -4,6 +4,8 @@ INC_DIR = $(PWD)/inc
 
 C_SOURCES = \
 	$(SRC_DIR)/bme280_attr_hmdt.c \
+	$(SRC_DIR)/bme280_impl.c \
+	$(SRC_DIR)/bmp280_impl.c \
 	$(SRC_DIR)/bmx280_attr.c \
 	$(SRC_DIR)/bmx280_attr_pres.c \
 	$(SRC_DIR)/bmx280_attr_temp.c \

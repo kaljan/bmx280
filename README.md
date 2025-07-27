@@ -59,5 +59,5 @@ Where `$SENSOR_NAME` is `temperature`, `pressure` or `humidity`
 * [ ] SPI 4 wire support
 * [ ] SPI 3 wire support
 * [x] BME280 support
-* [ ] BMP280 support
+* [x] BMP280 support
 * [ ] T<sub>fine</sub> attribute `/sys/bus/i2c/devices/2-0076/control/t_fine`
