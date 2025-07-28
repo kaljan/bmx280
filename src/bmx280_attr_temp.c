@@ -23,7 +23,8 @@ static ssize_t calibration_show(struct device *dev,
     if (handle->cal_show != NULL) {
         return handle->cal_show(handle->data, BMX280_TEMP_ID, buf);
     }
-    return -1;
+    dev_err(&client->dev, "[get calibration] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t value_show(struct device *dev,
@@ -34,8 +35,20 @@ static ssize_t value_show(struct device *dev,
     if (handle->data_show != NULL) {
         return handle->data_show(handle->data, client, BMX280_TEMP_ID, buf);
     }
+    dev_err(&client->dev, "[get value] assert error\n");
+    return -EFAULT;
+}
 
-    return -1;
+static ssize_t t_fine_show(struct device *dev,
+    struct device_attribute *attr, char *buf) {
+    struct i2c_client *client = to_i2c_client(dev);
+    struct bmx280_dev *handle = i2c_get_clientdata(client);
+
+    if (handle->data_show != NULL) {
+        return handle->data_show(handle->data, client, BMX280_TFIN_ID, buf);
+    }
+    dev_err(&client->dev, "[get Tfine] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t scale_show(struct device *dev,
@@ -51,8 +64,8 @@ static ssize_t oversampling_show(struct device *dev,
     if (handle->osrs_show != NULL) {
         return handle->osrs_show(handle->data, client, BMX280_TEMP_ID, buf);
     }
-
-    return -1;
+    dev_err(&client->dev, "[get oversampling] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t oversampling_store(struct device *dev,
@@ -63,8 +76,8 @@ static ssize_t oversampling_store(struct device *dev,
     if (handle->osrs_store != NULL) {
         return handle->osrs_store(handle->data, client, BMX280_TEMP_ID, buf, count);
     }
-
-    return -1;
+    dev_err(&client->dev, "[set oversampling] assert error\n");
+    return -EFAULT;
 }
 
 
@@ -72,12 +85,14 @@ static DEVICE_ATTR_RO(calibration);
 static DEVICE_ATTR_RO(value);
 static DEVICE_ATTR_RO(scale);
 static DEVICE_ATTR_RW(oversampling);
+static DEVICE_ATTR_RO(t_fine);
 
 static struct attribute *bmx280_temp_attrs[] = {
     &dev_attr_calibration.attr,
     &dev_attr_value.attr,
     &dev_attr_scale.attr,
     &dev_attr_oversampling.attr,
+    &dev_attr_t_fine.attr,
     NULL
 };
 

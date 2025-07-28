@@ -78,4 +78,11 @@ int bmx280_setup_attrs(struct device* dev,
 int bmp280_probe(struct i2c_client *client);
 int bme280_probe(struct i2c_client *client);
 
+const char* bmx280_osrs_to_str(uint8_t value);
+int8_t bmx280_str_to_osrs(const char* str);
+const char* bmx280_mode_to_str(uint8_t value);
+int8_t bmx280_str_to_mode(const char* str);
+const char* bmx280_filt_to_str(uint8_t value);
+int8_t bmx280_str_to_filt(const char* str);
+
 #endif /* BMX280_DEV_H */

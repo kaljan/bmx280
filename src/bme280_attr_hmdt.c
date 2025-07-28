@@ -22,7 +22,8 @@ static ssize_t calibration_show(struct device *dev,
     if (handle->cal_show != NULL) {
         return handle->cal_show(handle->data, BMX280_HMDT_ID, buf);
     }
-    return -1;
+    dev_err(&client->dev, "[get calibration] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t value_show(struct device *dev,
@@ -33,8 +34,8 @@ static ssize_t value_show(struct device *dev,
     if (handle->data_show != NULL) {
         return handle->data_show(handle->data, client, BMX280_HMDT_ID, buf);
     }
-
-    return -1;
+    dev_err(&client->dev, "[get value] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t scale_show(struct device *dev,
@@ -50,8 +51,8 @@ static ssize_t oversampling_show(struct device *dev,
     if (handle->osrs_show != NULL) {
         return handle->osrs_show(handle->data, client, BMX280_HMDT_ID, buf);
     }
-
-    return -1;
+    dev_err(&client->dev, "[get oversampling] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t oversampling_store(struct device *dev,
@@ -62,8 +63,8 @@ static ssize_t oversampling_store(struct device *dev,
     if (handle->osrs_store != NULL) {
         return handle->osrs_store(handle->data, client, BMX280_HMDT_ID, buf, count);
     }
-
-    return -1;
+    dev_err(&client->dev, "[set oversampling] assert error\n");
+    return -EFAULT;
 }
 
 

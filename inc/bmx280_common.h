@@ -121,11 +121,4 @@ int bmp280_conv_data(struct bmp280_data* dst, struct bmp280_cal* cal,
 int bme280_conv_data(struct bme280_data* dst, struct bme280_cal* cal,
     const uint8_t * data, uint32_t size);
 
-const char* bmx280_osrs_to_str(uint8_t value);
-int8_t bmx280_str_to_osrs(const char* str);
-const char* bmx280_mode_to_str(uint8_t value);
-int8_t bmx280_str_to_mode(const char* str);
-const char* bmx280_filt_to_str(uint8_t value);
-int8_t bmx280_str_to_filt(const char* str);
-
 #endif /* BMX280_COMMON_H */

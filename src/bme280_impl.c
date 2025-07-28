@@ -17,10 +17,12 @@ static int bme280_get_data(struct i2c_client* client, struct bme280_dev* context
 
     if (bmx280_i2c_read(client, BMX280_PR_MSB, temp, 8) <= 0) {
         dev_warn(&client->dev, "read data failed\n");
-        return -1;
+        return -EIO;
+    } else if (bme280_conv_data(&context->data, &context->cal, temp, 8) < 0) {
+        return -EINVAL;
     }
 
-    return bme280_conv_data(&context->data, &context->cal, temp, 8);
+    return 0;
 }
 
 static ssize_t bme280_cal_show(void* user_data, uint8_t id, char* buf) {
@@ -33,7 +35,7 @@ static ssize_t bme280_cal_show(void* user_data, uint8_t id, char* buf) {
         return bme280_cal_hmdt_show(&context->cal.hmdt, buf);
     }
 
-    return -1;
+    return -EINVAL;
 }
 
 static ssize_t bme280_data_show(void* user_data,
@@ -41,7 +43,7 @@ static ssize_t bme280_data_show(void* user_data,
     struct bme280_dev* context = (struct bme280_dev*)user_data;
     if (id == BMX280_TEMP_ID) {
         if (bme280_get_data(client, context) < 0) {
-            return -1;
+            return -EIO;
         }
         return sprintf(buf, "%d\n", context->data.temperature);
     } else if (id == BMX280_PRES_ID) {
@@ -51,7 +53,7 @@ static ssize_t bme280_data_show(void* user_data,
     } else if (id == BMX280_TFIN_ID) {
         return sprintf(buf, "%d\n", context->data.t_fine);
     }
-    return -1;
+    return -EINVAL;
 }
 
 static ssize_t bme280_osrs_show(void* user_data,
@@ -61,10 +63,10 @@ static ssize_t bme280_osrs_show(void* user_data,
 
     if (bmx280_i2c_read(client, BMX280_CMR, &ctrl_meas, 1) <= 0) {
         dev_warn(&client->dev, "read data failed\n");
-        return -1;
+        return -EIO;
     } else if (bmx280_i2c_read(client, BMX280_CHR, &ctrl_hum, 1) <= 0) {
         dev_warn(&client->dev, "read data failed\n");
-        return -1;
+        return -EIO;
     }
 
     context->osrs.t = BMX280_GET_OSRS_T(ctrl_meas);
@@ -83,7 +85,7 @@ static ssize_t bme280_osrs_show(void* user_data,
             , bmx280_osrs_to_str(context->osrs.p)
             , bmx280_osrs_to_str(context->osrs.h));
     }
-    return 0;
+    return -EINVAL;
 }
 
 static ssize_t bme280_osrs_store(void* user_data,
@@ -94,7 +96,7 @@ static ssize_t bme280_osrs_store(void* user_data,
     uint8_t ctrl_meas, ctrl_hum;
 
     if (value < 0) {
-        return -1;
+        return -EINVAL;
     } else if (id == BMX280_TEMP_ID) {
         context->osrs.t = value;
         context->flags |= BME280_OSRS_T_FLAG;
@@ -110,6 +112,9 @@ static ssize_t bme280_osrs_store(void* user_data,
         context->osrs.h = value;
         context->flags = BME280_OSRS_T_FLAG |
             BME280_OSRS_P_FLAG | BME280_OSRS_H_FLAG;
+    } else {
+        dev_err(&client->dev, "unknown sensor id\n");
+        return -EINVAL;
     }
 
     if ((context->flags & BME280_OSRS_T_FLAG) &&
@@ -118,10 +123,10 @@ static ssize_t bme280_osrs_store(void* user_data,
 
         if (bmx280_i2c_read(client, BMX280_CMR, &ctrl_meas, 1) <= 0) {
             dev_warn(&client->dev, "read data failed\n");
-            return -1;
+            return -EIO;
         } else if (bmx280_i2c_read(client, BMX280_CHR, &ctrl_hum, 1) <= 0) {
             dev_warn(&client->dev, "read data failed\n");
-            return -1;
+            return -EIO;
         }
 
         BMX280_SET_OSRS_T(context->osrs.t, ctrl_meas);
@@ -130,10 +135,10 @@ static ssize_t bme280_osrs_store(void* user_data,
 
         if (bmx280_i2c_write_byte(client, BMX280_CHR, ctrl_hum) <= 0) {
             dev_warn(&client->dev, "write register ctrl_meas(0xF4) failed\n");
-            return -1;
+            return -EIO;
         } else if (bmx280_i2c_write_byte(client, BMX280_CMR, ctrl_meas) <= 0) {
             dev_warn(&client->dev, "write register ctrl_meas(0xF4) failed\n");
-            return -1;
+            return -EIO;
         }
         context->flags = 0;
     }
@@ -181,34 +186,21 @@ static int bme280_update_cal(struct i2c_client *client,
     int ret = 0;
     uint8_t* buf = kmalloc(BME280_CAL_SIZE, GFP_KERNEL);
 
-    do {
-
-        ret = bmx280_i2c_read(client, BMX280_REG_CALIB00, buf, 24);
-        if (ret <= 0) {
-            dev_err(&client->dev, "read calibration registers[0x88..0x9F] failed\n");
-            break;
-        }
-
-        ret = bmx280_i2c_read(client, BMX280_REG_CALIB25, &buf[24], 1);
-        if (ret <= 0) {
-            dev_err(&client->dev, "read calibration register[0xA1] failed\n");
-            break;
-        }
-
-        ret = bmx280_i2c_read(client, BMX280_REG_CALIB26, &buf[25], 7);
-        if (ret <= 0) {
-            dev_err(&client->dev, "read calibration registers[0xE1..0xE7] failed\n");
-            break;
-        }
-
-        ret = bme280_read_cal(&context->cal, buf, BME280_CAL_SIZE);
-        if (ret > 0) {
-            ret = 0;
-        } else {
-            dev_err(&client->dev, "parse calibration data failed\n");
-            ret = -1;
-        }
-    } while (0);
+    if (bmx280_i2c_read(client, BMX280_REG_CALIB00, buf, 24) <= 0) {
+        dev_err(&client->dev, "read calibration registers[0x88..0x9F] failed\n");
+        ret = -1;
+    } else if (bmx280_i2c_read(client, BMX280_REG_CALIB25, &buf[24], 1) <= 0) {
+        dev_err(&client->dev, "read calibration register[0xA1] failed\n");
+        ret = -1;
+    } else if (bmx280_i2c_read(client, BMX280_REG_CALIB26, &buf[25], 7) <= 0) {
+        dev_err(&client->dev, "read calibration registers[0xE1..0xE7] failed\n");
+        ret = -1;
+    } else if (bme280_read_cal(&context->cal, buf, BME280_CAL_SIZE) <= 0) {
+        dev_err(&client->dev, "parse calibration data failed\n");
+        ret = -1;
+    } else {
+        ret = 0;
+    }
 
     kfree(buf);
     buf = NULL;
@@ -242,7 +234,7 @@ int bme280_probe(struct i2c_client *client) {
 
     if (bme280_update_cal(client,
         (struct bme280_dev*)context->data) < 0) {
-        return -1;
+        return -EIO;
     }
 
     return bmx280_setup_attrs(&client->dev, bme280_attr_groups);

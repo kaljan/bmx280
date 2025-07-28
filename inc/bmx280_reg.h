@@ -104,8 +104,6 @@
 #define BMX280_SET_OSRS_H(value, reg)     BMX280_SET_FIELD(value, \
     reg, BMX280_OVERSAMPLING_MASK, BMX280_CHR_OSRS_H_OFFSET)
 
-
-
 /* Calibration data registers */
 #define BMX280_REG_CALIB00          0x88
 #define BMX280_REG_CALIB25          0xA1

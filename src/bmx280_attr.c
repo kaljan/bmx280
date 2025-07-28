@@ -15,13 +15,101 @@
 #include <linux/string.h>
 
 
+
+const char* bmx280_osrs_to_str(uint8_t value) {
+    switch (value & 0x07) {
+    case 0: return "skipped";
+    case 1: return "1";
+    case 2: return "2";
+    case 3: return "4";
+    case 4: return "8";
+    default:
+        break;
+    }
+    return "16";
+}
+
+int8_t bmx280_str_to_osrs(const char* str) {
+    int val;
+    uint8_t ret = -1;
+    if ((strcmp(str, "skipped") == 0) ||
+        (strcmp(str, "skip") == 0)) {
+        ret = 0;
+    } else if (kstrtoint(str, 10, &val) == 0) {
+        switch (val) {
+        case 1: ret = 1; break;
+        case 2: ret = 2; break;
+        case 4: ret = 3; break;
+        case 8: ret = 4; break;
+        default: break;
+        }
+    }
+    return ret;
+}
+
+const char* bmx280_mode_to_str(uint8_t value) {
+    switch (value & 0x03) {
+    case 0: return "sleep";
+    case 1: return "forced_1";
+    case 2: return "forced_2";
+    case 3: return "normal";
+    default:
+        break;
+    }
+    return "undefined";
+}
+
+int8_t bmx280_str_to_mode(const char* str) {
+    if (strcmp(str, "normal") == 0) {
+        return 3;
+    } else if (strcmp(str, "forced_2") == 0) {
+        return 2;
+    } else if ((strcmp(str, "forced_1") == 0) ||
+        (strcmp(str, "forced") == 0)) {
+        return 1;
+    } else if (strcmp(str, "sleep") == 0) {
+        return 0;
+    }
+    return -1;
+}
+
+const char* bmx280_filt_to_str(uint8_t value) {
+    switch (value & 0x07) {
+    case 0: return "off";
+    case 1: return "2";
+    case 2: return "4";
+    case 3: return "8";
+    default: break;
+    }
+    return "16";
+}
+
+int8_t bmx280_str_to_filt(const char* str) {
+    int val;
+    int8_t ret = -1;
+    if ((strcmp(str, "off") == 0) ||
+        (strcmp(str, "0") == 0)) {
+        ret = 0;
+    } else if (kstrtoint(str, 10, &val) == 0) {
+        switch (val) {
+        case 1: ret = 0; break;
+        case 2: ret = 1; break;
+        case 4: ret = 2; break;
+        case 8: ret = 3; break;
+        default: break;
+        }
+    }
+    return ret;
+}
+
+
 int bmx280_setup_attrs(struct device* dev,
     const struct attribute_group ** attrs) {
     int ret = 0;
     while (*attrs != NULL) {
-        if (devm_device_add_group(dev, *attrs) < 0) {
+        ret = devm_device_add_group(dev, *attrs);
+        if (ret < 0) {
             dev_err(dev, "add group failed\n");
-            ret = -1;
             break;
         }
         attrs++;
@@ -62,7 +150,7 @@ static ssize_t status_show(struct device *dev,
     uint8_t data;
 
     if (bmx280_i2c_read(client, BMX280_SR, &data, 1) <= 0) {
-        dev_warn(&client->dev, "read standby time failed\n");
+        dev_err(&client->dev, "read status(0xF3) register failed\n");
         return -1;
     }
 
@@ -81,7 +169,7 @@ static ssize_t stby_time_show(struct device *dev,
     if (handle->stby_to_int == NULL) {
         return -1;
     } else if (bmx280_i2c_read(client, BMX280_CR, &data, 1) <= 0) {
-        dev_warn(&client->dev, "read standby time failed\n");
+        dev_err(&client->dev, "read standby time failed failed\n");
         return -1;
     }
 
@@ -101,8 +189,12 @@ static ssize_t stby_time_store(struct device *dev,
         return -1;
     } else if (kstrtoint(buf, 10, &temp) == 0) {
         val = handle->int_to_stby(temp);
-        if ((val < 0) || (bmx280_modify_config_reg(client, val,
+        if (val < 0) {
+            dev_err(&client->dev, "parse sandby time failed\n");
+            return -1;
+        } else if ((val < 0) || (bmx280_modify_config_reg(client, val,
             BMX280_CR_T_SB_MASK, BMX280_CR_T_SB_OFFSET) < 0)) {
+            dev_err(&client->dev, "set sandby time failed\n");
             return -1;
         }
     }
@@ -117,7 +209,7 @@ static ssize_t iir_filter_show(struct device *dev,
     const char* iir_filt = 0;
 
     if (bmx280_i2c_read(client, BMX280_CR, &data, 1) <= 0) {
-        dev_warn(&client->dev, "read standby time failed\n");
+        dev_err(&client->dev, "read IIR filter value failed\n");
         return -1;
     }
 
@@ -130,9 +222,12 @@ static ssize_t iir_filter_store(struct device *dev,
     struct device_attribute *attr, const char *buf, size_t count) {
     struct i2c_client *client = to_i2c_client(dev);
     int8_t val = bmx280_str_to_filt(buf);
-
-    if ((val < 0) || (bmx280_modify_config_reg(client, val,
+    if (val < 0) {
+        dev_err(&client->dev, "parse IIR filter value failed\n");
+        return -1;
+    } else if ((val < 0) || (bmx280_modify_config_reg(client, val,
         BMX280_CR_FILTER_MASK, BMX280_CR_FILTER_OFFSET) < 0)) {
+        dev_err(&client->dev, "set IIR filter value failed\n");
         return -1;
     }
 
@@ -147,7 +242,8 @@ static ssize_t oversampling_show(struct device *dev,
     if (handle->osrs_show != NULL) {
         return handle->osrs_show(handle->data, client, BMX280_ALL_ID, buf);
     }
-    return -1;
+    dev_err(&client->dev, "[get oversampling] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t oversampling_store(struct device *dev,
@@ -158,8 +254,8 @@ static ssize_t oversampling_store(struct device *dev,
     if (handle->osrs_show != NULL) {
         return handle->osrs_store(handle->data, client, BMX280_ALL_ID, buf, count);
     }
-
-    return -1;
+    dev_err(&client->dev, "[set oversampling] assert error\n");
+    return -EFAULT;
 }
 
 static ssize_t mode_show(struct device *dev,
@@ -169,8 +265,8 @@ static ssize_t mode_show(struct device *dev,
     const char* mode = 0;
 
     if (bmx280_i2c_read(client, BMX280_CMR, &data, 1) <= 0) {
-        dev_warn(&client->dev, "read standby time failed\n");
-        return -1;
+        dev_err(&client->dev, "read mode failed\n");
+        return -EIO;
     }
 
     mode = bmx280_mode_to_str(data);
@@ -184,10 +280,12 @@ static ssize_t mode_store(struct device *dev,
     int8_t val = bmx280_str_to_mode(buf);
 
     if (val < 0) {
-        dev_warn(&client->dev, "convert mode failed\n");
-        return -1;
-    } else if (bmx280_modify_reg(client, BMX280_CMR, val, BMX280_CMR_MODE_MASK, 0) < 0) {
-        return -1;
+        dev_err(&client->dev, "get mode failed\n");
+        return -EINVAL;
+    } else if (bmx280_modify_reg(client, BMX280_CMR,
+        val, BMX280_CMR_MODE_MASK, 0) < 0) {
+        dev_err(&client->dev, "set mode failed\n");
+        return -EIO;
     }
 
     return count;
@@ -198,13 +296,15 @@ static ssize_t reset_store(struct device *dev,
     if ((strlen("reset") == strlen(buf)) && (strcmp(buf, "reset") == 0)) {
         struct i2c_client *client = to_i2c_client(dev);
         struct bmx280_dev *handle = i2c_get_clientdata(client);
-
-        if (bmx280_i2c_write_byte(client, BMX280_RSTR, BMX280_RSTR_KEY) <= 0) {
-            dev_warn(&client->dev, "write to reset(0xE0) register failed\n");
-            return -1;
-        } else if (handle->reset != NULL) {
-            handle->reset(handle->data);
+        if (handle->reset == NULL) {
+            return -EFAULT;
+        } else if (bmx280_i2c_write_byte(client, BMX280_RSTR, BMX280_RSTR_KEY) <= 0) {
+            dev_err(&client->dev, "reset failed\n");
+            return -EIO;
         }
+        handle->reset(handle->data);
+    } else {
+        return -EINVAL;
     }
     return count;
 }

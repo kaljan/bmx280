@@ -1,15 +1,27 @@
 # Linux kernel module for BMP280/BME280 environmental sensor
 
-> **NOTE:**
->
-> At the moment kernel module works only with **BME280** sensor
-> connected to I2C bus.
->
 > **Tested on**:
 > * **Yocto Scrthgap**
 > * **Linux kernel 6.12** (`ti-staging`).
 > * **BeagleBone Black Rev.C**
 >
+
+## Plans
+
+* [x] I2C support
+* [ ] SPI 4 wire support
+* [ ] SPI 3 wire support
+* [x] BME280 support
+* [x] BMP280 support
+
+## TODO
+
+* ~~Add T<sub>fine</sub> attribute `/sys/bus/i2c/devices/2-0076/control/t_fine`~~
+* Add device tree overlays
+* Add doxy comments
+* Add description to README.md
+* Add usage examples to README.md
+
 
 # Device tree example
 
@@ -53,11 +65,3 @@ All necessary features you can find in `/sys/bus/i2c/devices/2-0076`
 
 Where `$SENSOR_NAME` is `temperature`, `pressure` or `humidity`
 
-## Plans
-
-* [x] I2S support
-* [ ] SPI 4 wire support
-* [ ] SPI 3 wire support
-* [x] BME280 support
-* [x] BMP280 support
-* [ ] T<sub>fine</sub> attribute `/sys/bus/i2c/devices/2-0076/control/t_fine`

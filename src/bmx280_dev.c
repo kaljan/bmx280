@@ -26,26 +26,23 @@ static int bmx280_i2c_probe(struct i2c_client *client)
     uint8_t id = 0;
 
     ret = bmx280_i2c_read(client, BMX280_IDR, &id, 1);
-    if (ret > 0) {
-        if ((id == BMP280_DEVICE_ID_SMP0) ||
-            (id == BMP280_DEVICE_ID_SMP1) ||
-            (id == BMP280_DEVICE_ID)) {
-            dev_info(&client->dev, "BMP280 detected; ID: 0x%02X", id);
-            return bmp280_probe(client);
-        } else if (id == BME280_DEVICE_ID) {
-            dev_info(&client->dev, "BME280 detected; ID: 0x%02X", id);
-            return bme280_probe(client);
-        } else {
-            dev_warn(&client->dev,
-                "wrong device id; expected: 0x%02X; actual: 0x%02X\n"
-                , BME280_DEVICE_ID, id);
-        }
+    if (ret <= 0) {
+        dev_err(&client->dev, "read device id failed\n");
+        return -EIO;
+    } else if ((id == BMP280_DEVICE_ID_SMP0) ||
+        (id == BMP280_DEVICE_ID_SMP1) ||
+        (id == BMP280_DEVICE_ID)) {
+        dev_info(&client->dev, "BMP280 detected; ID: 0x%02X", id);
+        return bmp280_probe(client);
+    } else if (id == BME280_DEVICE_ID) {
+        dev_info(&client->dev, "BME280 detected; ID: 0x%02X", id);
+        return bme280_probe(client);
+    } else {
+        dev_warn(&client->dev,
+            "wrong device id; expected: 0x%02X; actual: 0x%02X\n"
+            , BME280_DEVICE_ID, id);
     }
-    return -1;
-}
-
-static void bmx280_i2c_remove(struct i2c_client *client) {
-
+    return -EIO;
 }
 
 
@@ -72,7 +69,6 @@ static struct i2c_driver bmx280_i2c_driver = {
         .of_match_table = of_bmx280_match,
     },
     .probe              = bmx280_i2c_probe,
-    .remove             = bmx280_i2c_remove,
     .id_table           = bmx280_i2c_id,
 };
 
